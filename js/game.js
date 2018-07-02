@@ -1,59 +1,83 @@
-
-/* Game namespace */
+/**
+ * main
+ */
 var game = {
 
-	// an object where to store game information
-	data : {
-		// score
-		score : 0
-	},
+    /**
+     * object where to store game global data
+     */
+    data : {
+        // score
+        score : 0
+    },
 
-    // Run on page load.
-    "onload" : function () {
-        // Initialize the video.
-        if (!me.video.init(640, 480, {wrapper : "screen", scale : "auto", scaleMethod : "flex-width"})) {
+    /**
+     *
+     * Initialize the application
+     */
+    onload: function() {
+
+        // init the video
+        if (!me.video.init(800, 600, {wrapper : "screen", scale : "auto", scaleMethod : "flex-width", renderer : me.video.CANVAS, subPixel : false })) {
             alert("Your browser does not support HTML5 canvas.");
             return;
         }
 
-        // add "#debug" to the URL to enable the debug Panel
-        if (me.game.HASH.debug === true) {
-            window.onReady(function () {
-                me.plugin.register.defer(this, me.debug.Panel, "debug", me.input.KEY.V);
-            });
-        }
-
-        // Initialize the audio.
+        // initialize the "sound engine"
         me.audio.init("mp3,ogg");
 
-        // Set a callback to run when loading is complete.
-        me.loader.onload = this.loaded.bind(this);
-
-        // Load the resources.
-        me.loader.preload(game.resources);
-
-        // Initialize melonJS and display a loading screen.
-        me.state.change(me.state.LOADING);
+        // set all ressources to be loaded
+        me.loader.preload(game.resources, this.loaded.bind(this));
     },
 
 
+    /**
+     * callback when everything is loaded
+     */
+    loaded: function ()    {
 
-    // Run on game resources loaded.
-    "loaded" : function () {
-        me.state.set(me.state.MENU, new game.TitleScreen());
+        // set the "Play/Ingame" Screen Object
         me.state.set(me.state.PLAY, new game.PlayScreen());
 
-		// add our player entity in the entity pool
-		me.pool.register("mainPlayer", game.PlayerEntity);
-		me.pool.register("CoinEntity", game.CoinEntity);
-		me.pool.register("EnemyEntity", game.EnemyEntity);
+        // set the fade transition effect
+        me.state.transition("fade", "#FFFFFF", 250);
 
-		// enable the keyboard
-		me.input.bindKey(me.input.KEY.LEFT,		"left");
-		me.input.bindKey(me.input.KEY.RIGHT,	"right");
-		me.input.bindKey(me.input.KEY.X,		"jump", true);
+        // register our objects entity in the object pool
+        me.pool.register("mainPlayer", game.PlayerEntity);
+        me.pool.register("SlimeEntity", game.SlimeEnemyEntity);
+        me.pool.register("FlyEntity", game.FlyEnemyEntity);
+        me.pool.register("CoinEntity", game.CoinEntity);
 
-        // Start the game.
-        me.state.change(me.state.MENU);
+        // load the texture atlas file
+        // this will be used by object entities later
+        game.texture = new me.video.renderer.Texture(
+            me.loader.getJSON("texture"),
+            me.loader.getImage("texture")
+        );
+
+        // add some keyboard shortcuts
+        me.event.subscribe(me.event.KEYDOWN, function (action, keyCode /*, edge */) {
+
+            // change global volume setting
+            if (keyCode === me.input.KEY.PLUS) {
+                // increase volume
+                me.audio.setVolume(me.audio.getVolume()+0.1);
+            } else if (keyCode === me.input.KEY.MINUS) {
+                // decrease volume
+                me.audio.setVolume(me.audio.getVolume()-0.1);
+            }
+
+            // toggle fullscreen on/off
+            if (keyCode === me.input.KEY.F) {
+                if (!me.device.isFullscreen) {
+                    me.device.requestFullscreen();
+                } else {
+                    me.device.exitFullscreen();
+                }
+            }
+        });
+
+        // switch to PLAY state
+        me.state.change(me.state.PLAY);
     }
 };
